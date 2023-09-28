@@ -94,7 +94,11 @@ export function cutClip(
 function getClips(fileName: string, clipsDir: string) {
   const clips = fs.readdirSync(clipsDir);
   return clips
-    .sort()
+    .sort((a, b) => {
+      const aIndex = parseInt(a.split("_")[1].split(".")[0]);
+      const bIndex = parseInt(b.split("_")[1].split(".")[0]);
+      return aIndex - bIndex;
+    })
     .filter((clip) => clip.startsWith(fileName))
     .map((clip) => `${clipsDir}/${clip}`);
 }
