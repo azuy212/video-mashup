@@ -10,9 +10,9 @@ import {
 } from "./utils";
 
 const videoFilePath =
-  "/Users/azuy/Videos/TV Series/The.Office.US.SEASON.09.S09.COMPLETE.720p.BluRay.2CH.x265.HEVC-PSA/The.Office.US.S09E01.The.New.Guys.720p.BluRay.2CH.x265.HEVC-PSA.mkv";
+  "/home/ali/Videos/TV Series/The Office/The.Office.US.SEASON.01.S01.COMPLETE.720p.WEBRip.2CH.x265.HEVC-PSA/The.Office.US.S01E01.Pilot.720p.WEBRip.2CH.x265.HEVC-PSA.mkv";
 
-const searchPhrases = ["Jim", "Dwight", "Oscar", "Andy"];
+const searchPhrases = ["That's what she said", "Michael Scott"];
 
 const outputDir = "mashups_the_office";
 const clipsDir = "clips";
@@ -36,6 +36,7 @@ const tasks = new Listr<Ctx>([
   },
   {
     title: "Create clips folder",
+    skip: (ctx) => ctx.subtitleChunks.length === 0,
     task: async (ctx, task) => {
       createDir(clipsDir);
     },
@@ -66,12 +67,14 @@ const tasks = new Listr<Ctx>([
   },
   {
     title: "Create output folder",
+    skip: (ctx) => ctx.subtitleChunks.length === 0,
     task: async () => {
       createDir(outputDir);
     },
   },
   {
     title: "Join clips",
+    skip: (ctx) => ctx.subtitleChunks.length === 0,
     task: async (ctx) => {
       const fileName = encodeFileName(ctx.searchPhrase);
       await joinClips(fileName, clipsDir, outputDir);
@@ -79,6 +82,7 @@ const tasks = new Listr<Ctx>([
   },
   {
     title: "Remove clips",
+    skip: (ctx) => ctx.subtitleChunks.length === 0,
     task: async () => {
       await fs.rm("clips", { recursive: true, force: true });
     },
