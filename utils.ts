@@ -1,16 +1,66 @@
 import { execa } from "execa";
-import fs from "fs/promises";
+import fs from "fs";
 import { Node, NodeCue, parseSync } from "subtitle";
 
 export function encodeFileName(fileName: string) {
   return fileName.replace(/[^a-z0-9]/gi, "_");
 }
 
-export async function createDir(dir: string) {
-  if (await fs.exists(dir)) {
+export function createDir(dir: string) {
+  if (fs.existsSync(dir)) {
     return;
   }
-  return fs.mkdir(dir);
+  return fs.mkdirSync(dir);
+}
+
+export function parseSubtitles(subtitleFilePath: string) {
+  const subtitleFile = fs.readFileSync(subtitleFilePath, "utf-8");
+  return parseSync(subtitleFile);
+}
+
+async function getSubtitles(videoFilePath: string) {
+  const subtitleFilePath = videoFilePath.replace(".mkv", ".srt");
+  if (fs.existsSync(subtitleFilePath)) {
+    return parseSubtitles(subtitleFilePath);
+  }
+
+  // Extract subtitles from video
+  await execa("ffmpeg", [
+    "-i",
+    subtitleFilePath.replace(".srt", ".mkv"),
+    "-map",
+    "0:s:0",
+    subtitleFilePath,
+  ]);
+
+  if (fs.existsSync(subtitleFilePath)) {
+    const subtitles = parseSubtitles(subtitleFilePath);
+    fs.unlinkSync(subtitleFilePath);
+    return subtitles;
+  }
+
+  throw new Error(`Could not find subtitle file for ${videoFilePath}`);
+}
+
+const isCue = (node: Node): node is NodeCue => node.type === "cue";
+
+export async function findPhraseInSubtitleFile(
+  videoFilePath: string,
+  phrase: string
+) {
+  const subtitles = await getSubtitles(videoFilePath);
+
+  return (
+    subtitles
+      .filter(isCue)
+      .map((subtitle) => subtitle.data)
+      // find all the subtitles that contain the phrase but not the phrase with narrator as phrase
+      .filter(
+        (subtitle) =>
+          subtitle.text.toLowerCase().includes(phrase.toLowerCase()) &&
+          !subtitle.text.toLowerCase().includes(`[${phrase.toLowerCase()}]`)
+      )
+  );
 }
 
 export function cutClip(
@@ -41,30 +91,8 @@ export function cutClip(
   return ffmpegProcess;
 }
 
-const isCue = (node: Node): node is NodeCue => node.type === "cue";
-
-export async function findPhraseInSubtitleFile(
-  subtitleFile: string,
-  phrase: string
-) {
-  const srtFile = await fs.readFile(subtitleFile, "utf-8");
-  const subtitles = parseSync(srtFile);
-
-  return (
-    subtitles
-      .filter(isCue)
-      .map((subtitle) => subtitle.data)
-      // find all the subtitles that contain the phrase but not the phrase with narrator as phrase
-      .filter(
-        (subtitle) =>
-          subtitle.text.toLowerCase().includes(phrase.toLowerCase()) &&
-          !subtitle.text.toLowerCase().includes(`[${phrase.toLowerCase()}]`)
-      )
-  );
-}
-
-async function getClips(fileName: string, clipsDir: string) {
-  const clips = await fs.readdir(clipsDir);
+function getClips(fileName: string, clipsDir: string) {
+  const clips = fs.readdirSync(clipsDir);
   return clips
     .sort()
     .filter((clip) => clip.startsWith(fileName))
@@ -72,10 +100,10 @@ async function getClips(fileName: string, clipsDir: string) {
 }
 
 async function createConcatFile(fileName: string, clipsDir: string) {
-  const clips = await getClips(fileName, clipsDir);
+  const clips = getClips(fileName, clipsDir);
   const concatFileData = clips.map((clip) => `file '${clip}'`).join("\n");
   const concatFileName = `${fileName}.txt`;
-  await fs.writeFile(concatFileName, concatFileData);
+  fs.writeFileSync(concatFileName, concatFileData);
   return concatFileName;
 }
 
@@ -103,5 +131,5 @@ export async function joinClips(
   // ffmpegProcess.stderr?.pipe(process.stderr);
 
   await ffmpegProcess;
-  await fs.unlink(concatFileName);
+  fs.unlinkSync(concatFileName);
 }

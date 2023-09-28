@@ -9,8 +9,10 @@ import {
   joinClips,
 } from "./utils";
 
-const videoFile =
-  "/Users/azuy/Videos/TV Series/Modern Family Season 1-11 Complete 720p x264 [Pahe.in]/Modern Family Season 1 BluRay 720p x264 - Pahe.in/Modern.Family.S01E01.720p.BluRay.x264.150MB-Pahe.in.mkv";
+const videoFilePath =
+  "/Users/azuy/Videos/TV Series/The.Office.US.SEASON.09.S09.COMPLETE.720p.BluRay.2CH.x265.HEVC-PSA/The.Office.US.S09E01.The.New.Guys.720p.BluRay.2CH.x265.HEVC-PSA.mkv";
+
+const searchPhrase = "Pam";
 
 const outputDir = "mashups";
 const clipsDir = "clips";
@@ -25,7 +27,7 @@ const tasks = new Listr<Ctx>([
     title: "Find phrases in subtitle file",
     task: async (ctx, task) => {
       const subtitleChunks = await findPhraseInSubtitleFile(
-        videoFile.replace(".mkv", ".srt"),
+        videoFilePath,
         ctx.searchPhrase
       );
       ctx.subtitleChunks = subtitleChunks;
@@ -35,7 +37,7 @@ const tasks = new Listr<Ctx>([
   {
     title: "Create clips folder",
     task: async (ctx, task) => {
-      await createDir(clipsDir);
+      createDir(clipsDir);
     },
   },
   {
@@ -49,7 +51,7 @@ const tasks = new Listr<Ctx>([
           )} to ${formatTimestamp(subtitle.end)}`,
           task: async () => {
             await cutClip(
-              videoFile,
+              videoFilePath,
               formatTimestamp(subtitle.start, { format: "WebVTT" }),
               formatTimestamp(subtitle.end, { format: "WebVTT" }),
               `${clipsDir}/${encodeFileName(ctx.searchPhrase)}_${index}.mkv`
@@ -65,7 +67,7 @@ const tasks = new Listr<Ctx>([
   {
     title: "Create output folder",
     task: async () => {
-      await createDir(outputDir);
+      createDir(outputDir);
     },
   },
   {
@@ -86,7 +88,7 @@ const tasks = new Listr<Ctx>([
 console.time("Total time");
 
 await tasks.run({
-  searchPhrase: "Mom",
+  searchPhrase,
 } as Ctx);
 
 console.timeEnd("Total time");
