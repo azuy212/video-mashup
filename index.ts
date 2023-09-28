@@ -12,9 +12,9 @@ import {
 const videoFilePath =
   "/Users/azuy/Videos/TV Series/The.Office.US.SEASON.09.S09.COMPLETE.720p.BluRay.2CH.x265.HEVC-PSA/The.Office.US.S09E01.The.New.Guys.720p.BluRay.2CH.x265.HEVC-PSA.mkv";
 
-const searchPhrase = "Pam";
+const searchPhrases = ["Stanley", "Phyllis", "Creed"];
 
-const outputDir = "mashups";
+const outputDir = "mashups_the_office";
 const clipsDir = "clips";
 
 interface Ctx {
@@ -87,8 +87,8 @@ const tasks = new Listr<Ctx>([
 
 console.time("Total time");
 
-await tasks.run({
-  searchPhrase,
-} as Ctx);
+for (const searchPhrase of searchPhrases) {
+  await tasks.run({ searchPhrase } as Ctx);
+}
 
 console.timeEnd("Total time");

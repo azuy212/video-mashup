@@ -170,4 +170,13 @@ dist
 
 # IntelliJ based IDEs
 .idea
-mashups/*
+
+# Video Files
+*.mp4
+*.mov
+*.wmv
+*.avi
+*.avchd
+*.mkv
+*.mpg
+*.mpeg
