@@ -1,6 +1,17 @@
 import { execa } from "execa";
-import fs from "fs";
+import fs from "fs/promises";
 import { Node, NodeCue, parseSync } from "subtitle";
+
+export function encodeFileName(fileName: string) {
+  return fileName.replace(/[^a-z0-9]/gi, "_");
+}
+
+export async function createDir(dir: string) {
+  if (await fs.exists(dir)) {
+    return;
+  }
+  return fs.mkdir(dir);
+}
 
 export function cutClip(
   input: string,
@@ -8,7 +19,6 @@ export function cutClip(
   endTime: string,
   output: string
 ) {
-  console.log(`Cutting clip from ${startTime} to ${endTime}`);
   const ffmpegProcess = execa("ffmpeg", [
     "-i",
     input,
@@ -33,8 +43,11 @@ export function cutClip(
 
 const isCue = (node: Node): node is NodeCue => node.type === "cue";
 
-export function findPhraseInSubtitleFile(subtitleFile: string, phrase: string) {
-  const srtFile = fs.readFileSync(subtitleFile, "utf-8");
+export async function findPhraseInSubtitleFile(
+  subtitleFile: string,
+  phrase: string
+) {
+  const srtFile = await fs.readFile(subtitleFile, "utf-8");
   const subtitles = parseSync(srtFile);
 
   return (
@@ -50,18 +63,29 @@ export function findPhraseInSubtitleFile(subtitleFile: string, phrase: string) {
   );
 }
 
-function createConcatFile(clips: string[], output: string) {
-  const concatFile = clips.map((clip) => `file '../${clip}'`).join("\n");
-  const concatFileName = `concat_${output.replace(".mkv", ".txt")}`;
-  const outputDir = output.split("/")[0];
-  fs.existsSync(`concat_${outputDir}`) || fs.mkdirSync(`concat_${outputDir}`);
-  fs.writeFileSync(concatFileName, concatFile);
+async function getClips(fileName: string, clipsDir: string) {
+  const clips = await fs.readdir(clipsDir);
+  return clips
+    .sort()
+    .filter((clip) => clip.startsWith(fileName))
+    .map((clip) => `${clipsDir}/${clip}`);
+}
+
+async function createConcatFile(fileName: string, clipsDir: string) {
+  const clips = await getClips(fileName, clipsDir);
+  const concatFileData = clips.map((clip) => `file '${clip}'`).join("\n");
+  const concatFileName = `${fileName}.txt`;
+  await fs.writeFile(concatFileName, concatFileData);
   return concatFileName;
 }
 
-export function joinClips(clips: string[], output: string) {
-  console.log(`Joining ${clips.length} clips into ${output}`);
-  const concatFileName = createConcatFile(clips, output);
+export async function joinClips(
+  fileName: string,
+  clipsDir: string,
+  outputDir: string
+) {
+  const output = `${outputDir}/${fileName}.mkv`;
+  const concatFileName = await createConcatFile(fileName, clipsDir);
   const ffmpegProcess = execa("ffmpeg", [
     "-f",
     "concat",
@@ -78,5 +102,6 @@ export function joinClips(clips: string[], output: string) {
   // ffmpegProcess.stdout?.pipe(process.stdout);
   // ffmpegProcess.stderr?.pipe(process.stderr);
 
-  return ffmpegProcess;
+  await ffmpegProcess;
+  await fs.unlink(concatFileName);
 }
