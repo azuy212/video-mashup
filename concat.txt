@@ -1,8 +1,0 @@
-file 'clips/Phil_2.mkv'
-file 'clips/Phil_3.mkv'
-file 'clips/Phil_1.mkv'
-file 'clips/Phil_0.mkv'
-file 'clips/Phil_4.mkv'
-file 'clips/Phil_5.mkv'
-file 'clips/Phil_7.mkv'
-file 'clips/Phil_6.mkv'
