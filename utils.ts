@@ -35,7 +35,7 @@ async function getSubtitles(videoFilePath: string) {
 
   if (fs.existsSync(subtitleFilePath)) {
     const subtitles = parseSubtitles(subtitleFilePath);
-    fs.unlinkSync(subtitleFilePath);
+    // fs.unlinkSync(subtitleFilePath);
     return subtitles;
   }
 
@@ -44,7 +44,7 @@ async function getSubtitles(videoFilePath: string) {
 
 const isCue = (node: Node): node is NodeCue => node.type === "cue";
 
-export async function findPhraseInSubtitleFile(
+export async function findPhraseInVideoFile(
   videoFilePath: string,
   phrase: string
 ) {
@@ -58,9 +58,33 @@ export async function findPhraseInSubtitleFile(
       .filter(
         (subtitle) =>
           subtitle.text.toLowerCase().includes(phrase.toLowerCase()) &&
-          !subtitle.text.toLowerCase().includes(`[${phrase.toLowerCase()}]`)
+          // Exclude phrases like [Narrator] or Narrator: from the search
+          !(
+            subtitle.text.toLowerCase().includes(`[${phrase.toLowerCase()}]`) ||
+            subtitle.text.toLowerCase().includes(`${phrase.toLowerCase()}: `)
+          )
       )
   );
+}
+
+export function findPhraseInVideoFolder(
+  folderPath: string,
+  phrase: string
+) {
+  return Promise.all(
+    fs
+    .readdirSync(folderPath)
+    .filter((fileName) => fileName.endsWith('.mkv'))
+    .sort()
+    .map(async (fileName) => {
+      const videoFilePath = `${folderPath}/${fileName}`;
+      const subtitleChunks = await findPhraseInVideoFile(videoFilePath, phrase);
+      return {
+        videoFilePath,
+        subtitleChunks,
+      };
+    })
+  )
 }
 
 export function cutClip(
@@ -82,6 +106,8 @@ export function cutClip(
     "ultrafast",
     "-c:a",
     "aac",
+    "-preset",
+    "ultrafast",
     output,
   ]);
 
